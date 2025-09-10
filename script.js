@@ -14,9 +14,14 @@ const DataAPI = {
     },
     addQuiz: function(currentData, key, newQuiz) {
         currentData[key] = newQuiz;
-        console.log("CREATE: Added new quiz with key:", key);
+        console.log("UPDATE/CREATE: Quiz with key:", key);
         return currentData;
     },
+    deleteQuiz: function(currentData, key) {
+        delete currentData[key];
+        console.log("DELETE: Quiz with key:", key);
+        return currentData;
+    }
 };
 
 // #################################################################################
@@ -33,6 +38,7 @@ let answerHistory = []; // เก็บประวัติคำตอบ {x, 
 let combinedQuestions = []; // รวมคำถามตอนเริ่ม Quiz
 
 // State for the creator view
+let editingQuizKey = null; 
 let customEmotionQuestions = [];
 let customAppearanceQuestions = [];
 let customQuizResults = [];
@@ -40,6 +46,7 @@ let customQuizResults = [];
 // DOM Element references
 const views = {
     category: document.getElementById('category-selection-view'),
+    management: document.getElementById('management-view'),
     quiz: document.getElementById('quiz-view'),
     result: document.getElementById('result-view'),
     creator: document.getElementById('creator-view'),
@@ -60,15 +67,51 @@ function goHome() {
     scoreY = 0;
     answerHistory = [];
     combinedQuestions = [];
-    customEmotionQuestions = [];
-    customAppearanceQuestions = [];
-    customQuizResults = [];
-
+    editingQuizKey = null; 
+    
     renderCategorySelection();
     switchView('category');
 }
 
-function showCreatorView() {
+// ------------------- NEW & UPDATED MANAGEMENT/CREATOR FLOW -------------------
+
+function showManagementView() {
+    renderManagementList();
+    switchView('management');
+}
+
+function renderManagementList() {
+    const listContainer = document.getElementById('quiz-management-list');
+    listContainer.innerHTML = '';
+    const quizKeys = Object.keys(quizData);
+
+    if (quizKeys.length === 0) {
+        listContainer.innerHTML = '<p class="text-center text-muted">ยังไม่มีแบบทดสอบให้จัดการ</p>';
+        return;
+    }
+
+    quizKeys.forEach(key => {
+        const quiz = quizData[key];
+        const item = document.createElement('div');
+        item.className = 'creator-question-item';
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+        
+        item.innerHTML = `
+            <p style="margin: 0; font-weight: 600;">${quiz.title}</p>
+            <div>
+                <button class="edit-btn" onclick="editQuiz('${key}')" title="แก้ไข">&#9998;</button>
+                <button class="delete-btn" onclick="deleteQuiz('${key}')" title="ลบ">&times;</button>
+            </div>
+        `;
+        listContainer.appendChild(item);
+    });
+}
+
+function showNewCreatorView() {
+    editingQuizKey = null;
+    document.getElementById('creator-view-title').innerText = "สร้างแบบทดสอบของคุณ";
     document.getElementById('category-name-input').value = '';
     customEmotionQuestions = [];
     customAppearanceQuestions = [];
@@ -76,6 +119,31 @@ function showCreatorView() {
     renderAllCreatorLists();
     switchView('creator');
 }
+
+function editQuiz(key) {
+    editingQuizKey = key;
+    const quizToEdit = quizData[key];
+
+    document.getElementById('creator-view-title').innerText = `แก้ไข: ${quizToEdit.title}`;
+    document.getElementById('category-name-input').value = quizToEdit.title;
+    
+    customEmotionQuestions = JSON.parse(JSON.stringify(quizToEdit.questions.emotion));
+    customAppearanceQuestions = JSON.parse(JSON.stringify(quizToEdit.questions.appearance));
+    customQuizResults = JSON.parse(JSON.stringify(quizToEdit.results));
+
+    renderAllCreatorLists();
+    switchView('creator');
+}
+
+function deleteQuiz(key) {
+    if (confirm(`คุณต้องการลบแบบทดสอบ "${quizData[key].title}" ใช่หรือไม่?`)) {
+        quizData = DataAPI.deleteQuiz(quizData, key);
+        renderManagementList(); 
+    }
+}
+
+
+// ------------------- QUIZ GAME FLOW -------------------
 
 function startQuiz(categoryKey) {
     currentCategoryKey = categoryKey;
@@ -91,7 +159,6 @@ function startQuiz(categoryKey) {
         ...quiz.questions.emotion.map(q => ({...q, type: 'emotion'})),
         ...quiz.questions.appearance.map(q => ({...q, type: 'appearance'}))
     ];
-    combinedQuestions.sort(() => Math.random() - 0.5);
 
     renderQuestion();
     switchView('quiz');
@@ -188,14 +255,40 @@ function showResult() {
 
 // ### Creator View Logic ###
 
+// --- NEW FUNCTION ---
+function generateImageForCurrentResult(event) {
+    event.preventDefault(); // ป้องกันการ submit ฟอร์ม (ถ้ามี)
+    const title = document.getElementById('manual-result-title').value.trim();
+    if (!title) {
+        alert('กรุณาใส่ "ชื่อผลลัพธ์" ก่อนสร้างรูปภาพ');
+        return;
+    }
+
+    // จำลองการสร้างภาพด้วย AI โดยใช้ placeholder service
+    const encodedTitle = encodeURIComponent(title);
+    const randomBgColor = Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+    const imageUrl = `https://placehold.co/600x400/${randomBgColor}/ffffff?text=${encodedTitle}`;
+
+    const imageInput = document.getElementById('manual-result-image');
+    imageInput.value = imageUrl;
+
+    // แสดง Feedback เล็กน้อยบนปุ่ม
+    const genBtn = event.target;
+    const originalText = genBtn.innerHTML;
+    genBtn.innerHTML = 'สร้างแล้ว!';
+    genBtn.disabled = true;
+    setTimeout(() => {
+        genBtn.innerHTML = originalText;
+        genBtn.disabled = false;
+    }, 2000);
+}
+
 function addManualQuestion(type) {
     const newQuestion = {
         question: `คำถามใหม่ (${type === 'emotion' ? 'อารมณ์' : 'รูปลักษณ์'})`,
         answers: [
-            { text: "คำตอบ 1", points: 1 },
-            { text: "คำตอบ 2", points: 2 },
-            { text: "คำตอบ 3", points: 3 },
-            { text: "คำตอบ 4", points: 4 }
+            { text: "คำตอบ 1", points: 1 }, { text: "คำตอบ 2", points: 2 },
+            { text: "คำตอบ 3", points: 3 }, { text: "คำตอบ 4", points: 4 }
         ]
     };
     if (type === 'emotion') {
@@ -297,7 +390,12 @@ function deleteCreatorResult(index) {
 }
 
 function resetResultForm() {
-    document.getElementById('manual-result-form').reset();
+    const form = document.getElementById('manual-result-form');
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.type === 'hidden') el.value = -1;
+        else if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+    });
     document.getElementById('editing-result-index').value = -1;
 }
 
@@ -381,18 +479,20 @@ async function generateWithLLM(type) {
 
 function postCustomQuiz() {
     const categoryName = document.getElementById('category-name-input').value.trim();
-    if (!categoryName) { alert('กรุณาตั้งชื่อหมวดหมู่'); return; }
+    if (!categoryName) { alert('กรุณาตั้งชื่อแบบทดสอบ'); return; }
     if (customEmotionQuestions.length === 0 || customAppearanceQuestions.length === 0) { alert('กรุณาสร้างคำถามทั้งสองหมวดหมู่อย่างน้อย 1 ข้อ'); return; }
     if (customQuizResults.length < 4) { alert('กรุณาสร้างผลลัพธ์ให้ครบทั้ง 4 แบบ'); return; }
 
-    const newKey = `custom_${Date.now()}`;
+    const keyToUse = editingQuizKey ? editingQuizKey : `custom_${Date.now()}`;
+    
     const newQuiz = {
         title: categoryName,
         questions: { emotion: customEmotionQuestions, appearance: customAppearanceQuestions },
         results: customQuizResults
     };
-    quizData = DataAPI.addQuiz(quizData, newKey, newQuiz);
-    alert('สร้างแบบทดสอบสำเร็จ!');
+    quizData = DataAPI.addQuiz(quizData, keyToUse, newQuiz);
+    alert('บันทึกแบบทดสอบสำเร็จ!');
+    editingQuizKey = null; 
     goHome();
 }
 

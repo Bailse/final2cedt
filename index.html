@@ -7,7 +7,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,9 +19,23 @@
             <div id="category-list" class="category-grid">
                 </div>
             <div class="mt-6">
-                <button onclick="showCreatorView()" class="btn btn-success">
-                    + สร้างแบบทดสอบของคุณเอง
+                <button onclick="showManagementView()" class="btn btn-success">
+                    + จัดการคำถามและสร้างคำถาม
                 </button>
+            </div>
+        </div>
+
+        <div id="management-view" class="view">
+            <h2>จัดการคำถามและสร้างคำถาม</h2>
+            <div class="card">
+                <div id="quiz-management-list">
+                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                    <button onclick="goHome()" class="btn btn-link">กลับไปหน้าหลัก</button>
+                    <button onclick="showNewCreatorView()" class="btn btn-success">
+                        + สร้างแบบทดสอบใหม่
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -52,7 +65,7 @@
         </div>
         
         <div id="creator-view" class="view">
-            <h2>สร้างแบบทดสอบของคุณ</h2>
+            <h2 id="creator-view-title">สร้างแบบทดสอบของคุณ</h2>
             
             <div class="card">
                 <div class="form-group">
@@ -97,8 +110,12 @@
                          <input type="hidden" id="editing-result-index" value="-1">
                          <input type="text" id="manual-result-title" class="form-control" placeholder="ชื่อผลลัพธ์ (เช่น อเมทิสต์)" style="margin-bottom: 0.5rem;">
                          <textarea id="manual-result-desc" class="form-control" placeholder="คำอธิบายผลลัพธ์" style="margin-bottom: 0.5rem; rows: 2;"></textarea>
-                         <input type="text" id="manual-result-image" class="form-control" placeholder="URL รูปภาพ (ถ้ามี)" style="margin-bottom: 0.75rem;">
-                        
+                         
+                         <label class="form-label" style="font-size: 0.875rem; display: block; margin-bottom: 0.25rem;">รูปภาพ</label>
+                         <div class="input-group" style="margin-bottom: 0.75rem;">
+                            <input type="text" id="manual-result-image" class="form-control" placeholder="URL รูปภาพ (หรือกด Gen AI)">
+                            <button onclick="generateImageForCurrentResult(event)" class="btn btn-indigo">✨ Gen รูปภาพ</button>
+                         </div>
                          <label class="form-label" style="font-size: 0.875rem;">เงื่อนไขการแสดงผล:</label>
                          <div class="condition-group">
                               <span>ถ้าคะแนนอารมณ์ </span>
@@ -122,9 +139,9 @@
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
-                    <button onclick="goHome()" class="btn btn-link">ยกเลิก</button>
+                    <button onclick="showManagementView()" class="btn btn-link">ยกเลิก</button>
                     <button onclick="postCustomQuiz()" class="btn btn-success" style="width: auto; padding: 0.75rem 1.5rem;">
-                        ✅ Post แบบทดสอบ
+                        ✅ บันทึกแบบทดสอบ
                     </button>
                 </div>
             </div>
