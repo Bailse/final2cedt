@@ -4,14 +4,21 @@
     ส่วนนี้คือ CSS ที่เขียนขึ้นมาเองทั้งหมดเพื่อทดแทน Tailwind CSS
     เรากำหนดสไตล์สำหรับ element ต่างๆ เช่น body, container, buttons, cards ฯลฯ
 */
+* { 
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+ }
+html, body { height: 100vh; min-height: 100vh}
+
 :root {
-    --primary-color: #3b82f6; /* สีน้ำเงิน */
-    --primary-hover: #2563eb;
-    --secondary-color: #1f2937; /* สีเทาเข้ม */
+    --primary-color: #f5bc53; /* สีน้ำเงิน */
+    --primary-hover: #eab34e;
+    --secondary-color: #fffbfb;
     --background-color: #1a1a2e; /* สีพื้นหลังเว็บเป็นสีน้ำเงินเข้ม */
     --text-color: #e0e0e0;
     --text-muted-color: #9ca3af;
-    --card-background: rgba(23, 23, 43, 0.7);
+    --card-background: #fdf0d7;
     --border-color: #4b5563;
     --success-color: #22c55e;
     --success-hover: #16a34a;
@@ -21,6 +28,7 @@
     --purple-hover: #7c3aed;
     --indigo-color: #6366f1;
     --indigo-hover: #4f46e5;
+    --answer-btn-color: #ecb551;
 }
 
 /* Base Styles */
@@ -29,13 +37,12 @@ body {
     background-color: var(--background-color);
     color: var(--text-color);
     margin: 0;
-    padding: 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start; /* Changed to flex-start */
+    /* display: flex;
+    justify-content: center; */
+    /* align-items: flex-start; Changed to flex-start */
     min-height: 100vh;
+    min-width: 100vw;
     box-sizing: border-box;
-    padding-top: 2rem; /* Add padding top */
 }
 
 /* Layout */
@@ -43,6 +50,7 @@ body {
     width: 100%;
     max-width: 650px;
     margin: 0 auto;
+    padding: 1rem;
 }
 
 /* View Management */
@@ -54,6 +62,10 @@ body {
 }
 
 /* Typography */
+h1, h2, h3 {
+    display: block;
+    color: white;
+}
 h1 { font-size: 2.25rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem; color: #ffffff; }
 h2 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 1.5rem; color: #ffffff; }
 .subsection-title {
@@ -107,7 +119,7 @@ p { line-height: 1.6; }
 .btn-purple:hover { background-color: var(--purple-hover); }
 .btn-indigo { background-color: var(--indigo-color); color: white; }
 .btn-indigo:hover { background-color: var(--indigo-hover); }
-.btn-answer { background-color: var(--secondary-color); color: white; text-align: left; margin-bottom: 0.75rem; }
+.btn-answer { background-color: var(--answer-btn-color); color: white; text-align: left; margin-bottom: 0.75rem; }
 .btn-answer:hover { background-color: var(--primary-color); }
 .btn-link { background: none; box-shadow: none; color: var(--text-muted-color); }
 .btn-link:hover { color: white; }
@@ -162,11 +174,12 @@ textarea.form-control {
 
 /* Creator View specific styles */
 .creator-question-item {
-    background-color: #374151;
+    background-color: #efc95f;
     padding: 1rem;
     border-radius: 0.5rem;
     margin-bottom: 1rem;
-    border-left: 4px solid var(--primary-color);
+    border-left: 4px solid #ccad57;
+    color: white;
 }
 .creator-question-item.appearance {
      border-left-color: var(--purple-color);
@@ -216,7 +229,6 @@ textarea.form-control {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 50;
 }
 .spinner {
     width: 3rem;
@@ -225,4 +237,237 @@ textarea.form-control {
     border: 4px solid var(--border-color);
     border-top-color: var(--primary-color);
     animation: spin 1s linear infinite;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.h-full {
+    height: 100%;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.min-h-full {
+    min-height: 100%;
+}
+
+.shadow {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.text-black {
+    color: black;
+}
+
+.text-white {
+    color: white;
+}
+
+.relative {
+    position: relative;
+}
+
+.space-beween {
+    justify-content: space-between;
+}
+
+/* #start-page {
+    background-color: #fee377;
+    overflow: hidden;
+}
+
+#start-page-btn {
+    width: 25rem;
+    border-radius: 8rem;
+    font-size: 3rem;
+    font-weight: 300;
+    background-color: #7ba450;
+    color: white;
+}
+
+.start-title {
+    font-size: 6rem;
+    font-weight: 300;
+    color: white;
+} */
+
+#start-page {
+  /* fill the screen (safe on mobile toolbars) */
+  min-height: 100svh;                /* use 100vh if you prefer */
+  position: relative;
+  place-items: center;
+
+  /* space around content + room for the bottom illustration */
+  padding:
+    clamp(1rem, 4vw, 2rem)
+    max(1rem, env(safe-area-inset-right))
+    clamp(7rem, 18vw, 12rem)          /* bottom padding for dogs image */
+    max(1rem, env(safe-area-inset-left));
+  background: #fee377;
+  overflow: hidden;
+}
+
+/* Start Page Part */
+#start-page .container {
+  width: min(92vw, 720px);
+  display: grid;
+  justify-items: center;
+  gap: clamp(.5rem, 2vw, 1rem);
+  text-align: center;
+  padding: 0;
+}
+
+#start-page {
+    position: relative;
+}
+
+#start-page h3 { 
+    color: #fff;
+    font-size: clamp(.95rem, 2.5vw, 1.25rem);
+    font-weight: 500;
+}
+.start-title {
+    z-index: 5;
+    color: #fff;
+    font-weight: 700;
+    line-height: 1.05;
+    font-size: clamp(2.25rem, 10vw, 5rem);
+    margin: .25em 0 .5em;
+}
+
+#start-page-btn {
+    z-index: 4;
+    width: min(80vw, 20rem);
+    font-size: clamp(1rem, 3.2vw, 1.5rem);
+    padding: clamp(.65rem, 2.6vw, 1rem) clamp(1.2rem, 5vw, 1.75rem);
+    border-radius: 999px;
+    background-color: #7ba450;
+    color: #fff;
+}
+
+.decoration {
+  position: relative; inset: 0;
+  pointer-events: none;
+}
+
+.dogs-background {
+    z-index: 2;
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: min(90vw, 1000px);
+    /* optional: add a soft pill background */
+    background-color: #fff6d4;
+    border-radius: 50rem 50rem 0 0;
+    overflow: hidden;
+}
+
+.dogs-background img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.paw-svg {
+  position: absolute;
+  top: clamp(-4rem, -10vw, -2rem);
+  left: 12%;
+  width: clamp(6rem, 20vw, 11rem);
+  height: auto;
+  transform: rotate(-30deg);
+  opacity: .12;
+}
+@media (max-width: 480px) {
+  .paw-svg { display: none; }
+}
+
+@media (min-width: 768px) {
+  #start-page { padding-bottom: clamp(9rem, 14vw, 16rem); }
+  .dogs-background { width: min(80vw, 1100px); }
+}
+
+.paw-behind-text {
+    position: relative;
+}
+
+.paw-svg {
+    position: absolute;
+    height: 10rem;
+    width: 10rem;
+    top:-50%;
+    left:20%;
+    transform: rotate(-40deg);
+}
+
+#start-page .container {
+  position: relative;   /* <-- makes z-index apply */
+}
+
+.dogs-background {
+    z-index: 0;
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #fff6d4;
+    border-radius: 50rem;
+}
+
+#app {
+    background-color: #f6e3be;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    min-height: 100%;
+}
+
+.z-1 {
+    z-index: 1;
+}
+
+#question-text {
+    color: black;
+}
+
+#result-title {
+    color: black;
+}
+
+.bush-background {
+  --bush-gap: clamp(1rem, 10vw, 15rem);
+  position: fixed; 
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--bush-gap);
+
+  width: 100vw;
+  max-width: 1000px;
+  pointer-events: none;
+}
+
+.bush-background img {
+  width: calc((100% - var(--bush-gap)) / 2);
+  height: auto;
+  object-fit: contain;
 }

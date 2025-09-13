@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แบบทดสอบบุคลิกภาพ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="start-page" class="w-full h-full view active">
+        <div class="container w-full h-full flex flex-col items-center view">
+            <div class="flex flex-col justify-center items-center">
+                <div class="flex justify-center items-center"><h3 style="color: white;">Personality Quiz</h3></div>
+                <h1 class="start-title">PET MATCH</h1>
+                <button id="start-page-btn" class="btn">GET STARTED</button>
+            </div>
+            <div class="decoration w-full h-full">
+                <div class="bush-background w-full h-full">
+                    <img src='./components/bush.svg'/>
+                    <img src='./components/bush.svg'/>
+                </div>
+                <div class="dogs-background"><img src="./components/dogs.png"/></div>
+            </div>
+        </div>
+    </div>
+    <main id="app" class="view">
+        <div class="container w-full min-h-full flex flex-col justify-center items-center">
+            <div class="w-full min-h-full flex flex-col justify-center items-center relative">
+                <h3 class="text-black z-1">personality quiz</h3>
+                <h1 class="text-black z-1">PET MATCH</h1>
+                <svg class="paw-svg" viewBox="0 0 48.839 48.839">
+                    <g>
+                        <path style="fill:#000000;" d="M39.041,36.843c2.054,3.234,3.022,4.951,3.022,6.742c0,3.537-2.627,5.252-6.166,5.252 c-1.56,0-2.567-0.002-5.112-1.326c0,0-1.649-1.509-5.508-1.354c-3.895-0.154-5.545,1.373-5.545,1.373 c-2.545,1.323-3.516,1.309-5.074,1.309c-3.539,0-6.168-1.713-6.168-5.252c0-1.791,0.971-3.506,3.024-6.742 c0,0,3.881-6.445,7.244-9.477c2.43-2.188,5.973-2.18,5.973-2.18h1.093v-0.001c0,0,3.698-0.009,5.976,2.181 C35.059,30.51,39.041,36.844,39.041,36.843z M16.631,20.878c3.7,0,6.699-4.674,6.699-10.439S20.331,0,16.631,0 S9.932,4.674,9.932,10.439S12.931,20.878,16.631,20.878z M10.211,30.988c2.727-1.259,3.349-5.723,1.388-9.971 s-5.761-6.672-8.488-5.414s-3.348,5.723-1.388,9.971C3.684,29.822,7.484,32.245,10.211,30.988z M32.206,20.878 c3.7,0,6.7-4.674,6.7-10.439S35.906,0,32.206,0s-6.699,4.674-6.699,10.439C25.507,16.204,28.506,20.878,32.206,20.878z M45.727,15.602c-2.728-1.259-6.527,1.165-8.488,5.414s-1.339,8.713,1.389,9.972c2.728,1.258,6.527-1.166,8.488-5.414 S48.455,16.861,45.727,15.602z"/>
+                    </g>
+                </svg>
+            </div>
+            <div id="category-selection-view" class="view active z-1">
+                <p class="text-center text-muted mb-8">เลือกแบบทดสอบเพื่อเริ่มต้น</p>
+                <div id="category-list" class="category-grid"></div>
+                <div class="mt-6">
+                    <button onclick="showManagementView()" class="btn btn-success">
+                        +เพิ่มหมวดหมู่
+                    </button>
+                </div>
+            </div>
+
+            <div id="management-view" class="view">
+                <h2>จัดการคำถามและสร้างคำถาม</h2>
+                <div class="card">
+                    <div id="quiz-management-list">
+                        </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                        <button onclick="goHome()" class="btn btn-link">กลับไปหน้าหลัก</button>
+                        <button onclick="showNewCreatorView()" class="btn btn-success">
+                            + สร้างแบบทดสอบใหม่
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="quiz-view" class="view">
+                <h2 id="quiz-category-title"></h2>
+                <div class="card">
+                    <p id="question-text" class="mb-6" style="font-size: 1.25rem;"></p>
+                    <div id="answers-container">
+                        </div>
+                </div>
+                <div class="mt-6 text-center" style="display: flex; justify-content: space-between; align-items: center;">
+                    <button id="prev-question-btn" onclick="previousQuestion()" class="btn btn-link">ย้อนกลับข้อที่แล้ว</button>
+                    <button onclick="goHome()" class="btn btn-link">กลับไปหน้าเลือกหมวดหมู่</button>
+                </div>
+            </div>
+
+            <div id="result-view" class="view text-center">
+                <div class="card">
+                    <img id="result-image" src="" alt="Result Image" style="display: none;">
+                    <p class="text-lg mb-2 text-muted">ผลลัพธ์ของคุณคือ...</p>
+                    <h2 id="result-title" class="mb-4" style="text-align:center;"></h2>
+                    <p id="result-description" class="text-muted mb-8"></p>
+                    <button onclick="goHome()" class="btn btn-primary" style="width: auto; padding: 0.75rem 1.5rem;">
+                        เล่นอีกครั้ง
+                    </button>
+                </div>
+            </div>
+            
+            <div id="creator-view" class="view container">
+                <h2 id="creator-view-title">สร้างแบบทดสอบของคุณ</h2>
+                
+                <div class="card">
+                    <div class="form-group">
+                        <label for="category-name-input" class="form-label">1. ชื่อแบบทดสอบ</label>
+                        <input type="text" id="category-name-input" class="form-control" placeholder="เช่น คุณคืออัญมณีประเภทไหน?">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">2. เพิ่มคำถาม</label>
+                        <p class="text-muted" style="font-size: 0.875rem; margin-top: -0.5rem; margin-bottom: 1rem;">
+                            เพิ่มคำถามเพื่อวัดบุคลิกภาพใน 2 มิติ: <b>อารมณ์ (แกน X)</b> และ <b>รูปลักษณ์ (แกน Y)</b>
+                        </p>
+                        <div class="input-group">
+                            <button onclick="addManualQuestion('emotion')" class="btn btn-primary" style="flex: 1;">+ เพิ่มคำถามอารมณ์</button>
+                            <button onclick="addManualQuestion('appearance')" class="btn btn-primary" style="flex: 1;">+ เพิ่มคำถามรูปลักษณ์</button>
+                        </div>
+                        <div class="input-group" style="margin-top: 0.75rem;">
+                            <button onclick="generateWithLLM('emotion_questions')" class="btn btn-indigo" style="flex: 1;">✨ Gen คำถามอารมณ์ (AI)</button>
+                            <button onclick="generateWithLLM('appearance_questions')" class="btn btn-indigo" style="flex: 1;">✨ Gen คำถามรูปลักษณ์ (AI)</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">3. รายการคำถามของคุณ (แก้ไขได้)</label>
+                        
+                        <h3 class="subsection-title">หมวดหมู่คำถามด้านอารมณ์ (X)</h3>
+                        <div id="emotion-questions-list" class="mb-4"></div>
+
+                        <h3 class="subsection-title">หมวดหมู่คำถามด้านรูปลักษณ์ (Y)</h3>
+                        <div id="appearance-questions-list" class="mb-4"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">4. สร้างผลลัพธ์ (Results)</label>
+                        <button onclick="generateWithLLM('results')" class="btn btn-purple mb-4">
+                            ✨ Gen ผลลัพธ์ทั้งหมด (AI)
+                        </button>
+                        
+                        <div id="result-creator-list" class="mb-4"></div>
+
+                        <div id="manual-result-form" class="creator-question-item" style="background-color: #1f2937;">
+                            <input type="hidden" id="editing-result-index" value="-1">
+                            <input type="text" id="manual-result-title" class="form-control" placeholder="ชื่อผลลัพธ์ (เช่น อเมทิสต์)" style="margin-bottom: 0.5rem;">
+                            <textarea id="manual-result-desc" class="form-control" placeholder="คำอธิบายผลลัพธ์" style="margin-bottom: 0.5rem; rows: 2;"></textarea>
+                            
+                            <label class="form-label" style="font-size: 0.875rem; display: block; margin-bottom: 0.25rem;">รูปภาพ</label>
+                            <div class="input-group" style="margin-bottom: 0.75rem;">
+                                <input type="text" id="manual-result-image" class="form-control" placeholder="URL รูปภาพ (หรือกด Gen AI)">
+                                <button onclick="generateImageForCurrentResult(event)" class="btn btn-indigo">✨ Gen รูปภาพ</button>
+                            </div>
+                            <label class="form-label" style="font-size: 0.875rem;">เงื่อนไขการแสดงผล:</label>
+                            <div class="condition-group">
+                                <span>ถ้าคะแนนอารมณ์ </span>
+                                <select id="condition-x-op" class="form-control">
+                                    <option value="<=">&le; (น้อยกว่าหรือเท่ากับ)</option>
+                                    <option value=">">&gt; (มากกว่า)</option>
+                                </select>
+                                <input type="number" id="condition-x-val" class="form-control" placeholder="ค่า">
+                            </div>
+                            <div class="condition-group">
+                                <span>และคะแนนรูปลักษณ์ </span>
+                                <select id="condition-y-op" class="form-control">
+                                    <option value="<=">&le; (น้อยกว่าหรือเท่ากับ)</option>
+                                    <option value=">">&gt; (มากกว่า)</option>
+                                </select>
+                                <input type="number" id="condition-y-val" class="form-control" placeholder="ค่า">
+                            </div>
+
+                            <button onclick="addOrUpdateManualResult()" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">+ เพิ่ม/อัปเดตผลลัพธ์นี้</button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                        <button onclick="showManagementView()" class="btn btn-link">ยกเลิก</button>
+                        <button onclick="postCustomQuiz()" class="btn btn-success" style="width: auto; padding: 0.75rem 1.5rem;">
+                            ✅ บันทึกแบบทดสอบ
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loading-overlay" class="loading-overlay" style="display: none;">
+                <div style="text-align:center;">
+                    <div class="spinner"></div>
+                    <p style="color: white; margin-top: 1rem; font-size: 1.125rem;">กำลังใช้เวทมนตร์สร้างสรรค์...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="./scripts/script.js"></script>
+    <script src="./scripts/startpagescript.js"></script>
+
+</body>
+</html>

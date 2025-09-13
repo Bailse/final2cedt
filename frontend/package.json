@@ -1,0 +1,27 @@
+{
+  "name": "final2cedt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "live-server --port=5500 --open=index.html --watch=."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bailse/final2cedt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bailse/final2cedt/issues"
+  },
+  "homepage": "https://github.com/Bailse/final2cedt#readme",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
