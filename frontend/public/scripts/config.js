@@ -1,5 +1,5 @@
 
-export const BACKEND_URL = "http://54.235.30.205:3222";
+export const BACKEND_URL = "http://localhost:3222";
 
 export const MEMBERS = [
   

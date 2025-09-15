@@ -41,7 +41,7 @@
                 <p class="text-center text-muted mb-8">เลือกแบบทดสอบเพื่อเริ่มต้น</p>
                 <div id="category-list" class="category-grid"></div>
                 <div class="mt-6">
-                    <button onclick="showManagementView()" class="btn btn-success">
+                    <button class="btn btn-success show-man-view">
                         +เพิ่มหมวดหมู่
                     </button>
                 </div>
@@ -53,8 +53,8 @@
                     <div id="quiz-management-list">
                         </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
-                        <button onclick="goHome()" class="btn btn-link">กลับไปหน้าหลัก</button>
-                        <button onclick="showNewCreatorView()" class="btn btn-success">
+                        <button class="btn btn-link to-home-btn">กลับไปหน้าหลัก</button>
+                        <button class="btn btn-success" id="add-new-test">
                             + สร้างแบบทดสอบใหม่
                         </button>
                     </div>
@@ -69,8 +69,8 @@
                         </div>
                 </div>
                 <div class="mt-6 text-center" style="display: flex; justify-content: space-between; align-items: center;">
-                    <button id="prev-question-btn" onclick="previousQuestion()" class="btn btn-link">ย้อนกลับข้อที่แล้ว</button>
-                    <button onclick="goHome()" class="btn btn-link">กลับไปหน้าเลือกหมวดหมู่</button>
+                    <button id="prev-question-btn" class="btn btn-link">ย้อนกลับข้อที่แล้ว</button>
+                    <button class="btn btn-link to-home-btn">กลับไปหน้าเลือกหมวดหมู่</button>
                 </div>
             </div>
 
@@ -80,7 +80,7 @@
                     <p class="text-lg mb-2 text-muted">ผลลัพธ์ของคุณคือ...</p>
                     <h2 id="result-title" class="mb-4" style="text-align:center;"></h2>
                     <p id="result-description" class="text-muted mb-8"></p>
-                    <button onclick="goHome()" class="btn btn-primary" style="width: auto; padding: 0.75rem 1.5rem;">
+                    <button class="btn btn-primary to-home-btn" style="width: auto; padding: 0.75rem 1.5rem;">
                         เล่นอีกครั้ง
                     </button>
                 </div>
@@ -101,12 +101,12 @@
                             เพิ่มคำถามเพื่อวัดบุคลิกภาพใน 2 มิติ: <b>อารมณ์ (แกน X)</b> และ <b>รูปลักษณ์ (แกน Y)</b>
                         </p>
                         <div class="input-group">
-                            <button onclick="addManualQuestion('emotion')" class="btn btn-primary" style="flex: 1;">+ เพิ่มคำถามอารมณ์</button>
-                            <button onclick="addManualQuestion('appearance')" class="btn btn-primary" style="flex: 1;">+ เพิ่มคำถามรูปลักษณ์</button>
+                            <button id = "input-emotion" class="btn btn-primary" style="flex: 1;">+ เพิ่มคำถามอารมณ์</button>
+                            <button id = "input-appearance" class="btn btn-primary" style="flex: 1;">+ เพิ่มคำถามรูปลักษณ์</button>
                         </div>
                         <div class="input-group" style="margin-top: 0.75rem;">
-                            <button onclick="generateWithLLM('emotion_questions')" class="btn btn-indigo" style="flex: 1;">✨ Gen คำถามอารมณ์ (AI)</button>
-                            <button onclick="generateWithLLM('appearance_questions')" class="btn btn-indigo" style="flex: 1;">✨ Gen คำถามรูปลักษณ์ (AI)</button>
+                            <button id="gen-emotion" class="btn btn-indigo" style="flex: 1;">✨ Gen คำถามอารมณ์ (AI)</button>
+                            <button id="gen-appearance" class="btn btn-indigo" style="flex: 1;">✨ Gen คำถามรูปลักษณ์ (AI)</button>
                         </div>
                     </div>
 
@@ -122,7 +122,7 @@
                     
                     <div class="form-group">
                         <label class="form-label">4. สร้างผลลัพธ์ (Results)</label>
-                        <button onclick="generateWithLLM('results')" class="btn btn-purple mb-4">
+                        <button id="gen-result" class="btn btn-purple mb-4">
                             ✨ Gen ผลลัพธ์ทั้งหมด (AI)
                         </button>
                         
@@ -136,7 +136,7 @@
                             <label class="form-label" style="font-size: 0.875rem; display: block; margin-bottom: 0.25rem;">รูปภาพ</label>
                             <div class="input-group" style="margin-bottom: 0.75rem;">
                                 <input type="text" id="manual-result-image" class="form-control" placeholder="URL รูปภาพ (หรือกด Gen AI)">
-                                <button onclick="generateImageForCurrentResult(event)" class="btn btn-indigo">✨ Gen รูปภาพ</button>
+                                <button id = "gen-image" class="btn btn-indigo">✨ Gen รูปภาพ</button>
                             </div>
                             <label class="form-label" style="font-size: 0.875rem;">เงื่อนไขการแสดงผล:</label>
                             <div class="condition-group">
@@ -156,13 +156,13 @@
                                 <input type="number" id="condition-y-val" class="form-control" placeholder="ค่า">
                             </div>
 
-                            <button onclick="addOrUpdateManualResult()" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">+ เพิ่ม/อัปเดตผลลัพธ์นี้</button>
+                            <button id="add-update-manual-result" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">+ เพิ่ม/อัปเดตผลลัพธ์นี้</button>
                         </div>
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
-                        <button onclick="showManagementView()" class="btn btn-link">ยกเลิก</button>
-                        <button onclick="postCustomQuiz()" class="btn btn-success" style="width: auto; padding: 0.75rem 1.5rem;">
+                        <button class="btn btn-link show-man-view">ยกเลิก</button>
+                        <button id="post-quiz" class="btn btn-success" style="width: auto; padding: 0.75rem 1.5rem;">
                             ✅ บันทึกแบบทดสอบ
                         </button>
                     </div>
@@ -178,8 +178,8 @@
         </div>
     </main>
 
-    <script src="./scripts/script.js"></script>
-    <script src="./scripts/startpagescript.js"></script>
+    <script type="module" src="./scripts/script.js"></script>
+    <script type="module" src="./scripts/startpagescript.js"></script>
 
 </body>
 </html>

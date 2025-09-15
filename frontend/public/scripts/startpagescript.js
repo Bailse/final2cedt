@@ -1,5 +1,3 @@
-
-
 const initStart = () => {
     const startPageBtn = document.getElementById("start-page-btn");
     const startPage = document.getElementById("start-page")

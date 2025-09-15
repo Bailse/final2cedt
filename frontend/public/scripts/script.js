@@ -2,15 +2,11 @@
 // ### ส่วนจำลอง API (api.js)                                                     ###
 // #################################################################################
 
+import { getItems } from "./api.js";
+
 const DataAPI = {
     getAllQuizzes: function() {
-        return fetch('quiz.json')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok ' + response.statusText);
-                }
-                return response.json();
-            });
+        return getItems();
     },
     addQuiz: function(currentData, key, newQuiz) {
         currentData[key] = newQuiz;
@@ -273,7 +269,7 @@ function generateImageForCurrentResult(event) {
     imageInput.value = imageUrl;
 
     // แสดง Feedback เล็กน้อยบนปุ่ม
-    const genBtn = event.target;
+    const genBtn = event.currentTarget;
     const originalText = genBtn.innerHTML;
     genBtn.innerHTML = 'สร้างแล้ว!';
     genBtn.disabled = true;
@@ -527,4 +523,33 @@ function renderCategorySelection() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', initializeApp);
+function bindUI() {
+    const useShowManageView = document.querySelectorAll(".show-man-view");
+    const addTestBtn = document.getElementById("add-new-test");
+    const toHomeBtn = document.querySelectorAll(".to-home-btn");
+    const prevBtn = document.getElementById("prev-question-btn");
+    const inputEmotion = document.getElementById("input-emotion");
+    const inputAppearance = document.getElementById("input-appearance");
+    const genEmotion = document.getElementById("gen-emotion");
+    const genAppearance = document.getElementById("gen-appearance");
+    const genResult = document.getElementById("gen-result");
+    const genImage = document.getElementById("gen-image");
+    const addUpdManRes = document.getElementById("add-update-manual-result");
+    const postQuiz = document.getElementById("post-quiz");
+
+    useShowManageView.forEach((el) => el.addEventListener("click", showManagementView));
+    toHomeBtn.forEach((el) => el.addEventListener("click", goHome));
+    if (addTestBtn) addTestBtn.addEventListener("click", showNewCreatorView);
+    if (prevBtn) prevBtn.addEventListener("click", previousQuestion);
+    if (inputEmotion) inputEmotion.addEventListener("click", () => addManualQuestion('emotion'));
+    if (inputAppearance) inputAppearance.addEventListener("click", () => addManualQuestion('appearance'));
+    if (genEmotion) genEmotion.addEventListener("click", () => generateWithLLM('emotion_questions'));
+    if (genAppearance) genAppearance.addEventListener("click", () => generateWithLLM('appearance_questions'));
+    if (genResult) genResult.addEventListener("click", () => generateWithLLM('results'));
+    if (genImage) genImage.addEventListener("click", generateImageForCurrentResult);
+    if (addUpdManRes) addUpdManRes.addEventListener("click", addOrUpdateManualResult);
+    if (postQuiz) postQuiz.addEventListener("click", postCustomQuiz);
+}
+
+
+document.addEventListener('DOMContentLoaded', bindUI);

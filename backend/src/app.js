@@ -13,6 +13,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 // use routes
-app.use("Questions", ItemRoute);
+app.use("/questions", ItemRoute);
 
 export default app;
