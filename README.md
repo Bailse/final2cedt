@@ -1,9 +1,9 @@
 # final2cedt (no framework, implementing LLM)
 
 ## How to start
--create ".env" file in backend and follow your own MongoDB URL follow the .env-template file.
--change backend url in frontend config.js file to your backend url.
--run "npm i" in both frontend folder and backend folder to install the necessary npm modules.
+1. create ".env" file in backend and follow your own MongoDB URL follow the .env-template file.
+2. change backend url in frontend config.js file to your backend url.
+3. run "npm i" in both frontend folder and backend folder to install the necessary npm modules.
 
 ## How to play
 1. Click GET STARTED → choose a quiz.
@@ -17,5 +17,5 @@
 3. เพิ่ม Results และเงื่อนไข (X/Y) → ✅ บันทึกแบบทดสอบ
 
 ## Notes:
--API endpoints: GET/POST /questions, GET/PUT/DELETE /questions/:id
--If save fails: ensure the backend is running, BACKEND_URL is correct, and MongoDB is reachable.
+- API endpoints: GET/POST /questions, GET/PUT/DELETE /questions/:id
+- If save fails: ensure the backend is running, BACKEND_URL is correct, and MongoDB is reachable.
