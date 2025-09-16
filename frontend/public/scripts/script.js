@@ -2,23 +2,29 @@
 // ### ส่วนจำลอง API (api.js)                                                     ###
 // #################################################################################
 
-import { getItems } from "./api.js";
+import { getItems, createItem, deleteItem, loadItem, updateItem } from "./api.js";
 
-const DataAPI = {
-    getAllQuizzes: function() {
-        return getItems();
-    },
-    addQuiz: function(currentData, key, newQuiz) {
-        currentData[key] = newQuiz;
-        console.log("UPDATE/CREATE: Quiz with key:", key);
-        return currentData;
-    },
-    deleteQuiz: function(currentData, key) {
-        delete currentData[key];
-        console.log("DELETE: Quiz with key:", key);
-        return currentData;
-    }
-};
+// const DataAPI = {
+//     getAllQuizzes: function() {
+//         return getItems();
+//     },
+//     addQuiz: function(currentData, key, newQuiz) {
+//         currentData[key] = newQuiz;
+//         console.log("UPDATE/CREATE: Quiz with key:", key);
+//         return currentData;
+//     },
+//     deleteQuiz: function(currentData, key) {
+//         delete currentData[key];
+//         console.log("DELETE: Quiz with key:", key);
+//         return currentData;
+//     }
+// };
+
+const addQuiz = (currentData, key, newQuiz) => {
+    currentData[key] = newQuiz;
+    console.log("UPDATE/CREATE: Quiz with key:", key);
+    return currentData;
+}
 
 // #################################################################################
 // ### ส่วนหลักของ Application Logic                                              ###
@@ -133,7 +139,10 @@ function editQuiz(key) {
 
 function deleteQuiz(key) {
     if (confirm(`คุณต้องการลบแบบทดสอบ "${quizData[key].title}" ใช่หรือไม่?`)) {
-        quizData = DataAPI.deleteQuiz(quizData, key);
+        // quizData = DataAPI.deleteQuiz(quizData, key);
+        delete quizData[key];
+        console.log("DELETE: Quiz with key:", key);
+        // return currentData;
         renderManagementList(); 
     }
 }
@@ -486,7 +495,7 @@ function postCustomQuiz() {
         questions: { emotion: customEmotionQuestions, appearance: customAppearanceQuestions },
         results: customQuizResults
     };
-    quizData = DataAPI.addQuiz(quizData, keyToUse, newQuiz);
+    quizData = addQuiz(quizData, keyToUse, newQuiz);
     alert('บันทึกแบบทดสอบสำเร็จ!');
     editingQuizKey = null; 
     goHome();
@@ -494,7 +503,7 @@ function postCustomQuiz() {
 
 async function initializeApp() {
     try {
-        quizData = await DataAPI.getAllQuizzes();
+        quizData = await getItems();
         renderCategorySelection();
         switchView('category');
     } catch (error) {
