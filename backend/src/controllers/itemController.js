@@ -1,76 +1,99 @@
 import Item from "../models/itemModel.js";
 
-export const createItem = async (req, res) => {
+// GET /questions
+export async function getItems(req, res) {
   try {
-    const newItem = new Item(req.body);
-    await newItem.save();
-
-    res.status(200).json({ message: "OK" });
+    const docs = await Item.find().lean(); // safe here
+    return res.json(docs);                 // [{ _id, title, questions, results }, ...]
   } catch (err) {
-    if (err.name === "ValidationError") {
-      res.status(400).json({ error: "Bad Request" });
-    } else {
-      res.status(500).json({ error: "Internal server error." });
-    }
+    console.error("getItems error:", err);
+    return res.status(500).json({ message: "server error" });
   }
-};
+}
 
-
-
-
-export const getItems = async (req, res) => {
-  const items = await Item.find();
-
-  res.status(200).json(items);
-};
-
-
-
-
-export const deleteItem = async (req, res) => {
+// POST /questions
+export async function createItem(req, res) {
   try {
+    const { title, questions, results } = req.body;
+    if (!title) return res.status(400).json({ message: "title required" });
 
-    const deletedItem = await Item.findByIdAndDelete(req.params.id);
+    // const doc = await Item.create({
+    //   title,
+    //   questions: questions ?? { emotion: [], appearance: [] },
+    //   results: results ?? [],
+    // });
 
-    res.status(200).json({ message: "OK" });
+    const doc = await Item({
+      title,
+      questions: questions ?? { emotion: [], appearance: [] },
+      results: results ?? [],
+    });
+    doc.save();
 
-  }catch (err){
-    res.status(501).json({ error: "delete Not Implemented" });
+    return res.status(201).json(doc); // has _id
+  } catch (err) {
+    console.error("createItem error:", err);
+    return res.status(500).json({ message: "server error" });
   }
-
-  
-};
-
-
-
-
-export const loadItems = async (req, res) => {
-
-  try{
-
-    const items = await Item.findById(req.params.id);
-
-    res.status(200).json(items);
 }
 
-  catch (err){
-    res.status(501).json({ error: "load Not Implemented" });
+// PUT /questions/:id
+export async function updateItem(req, res) {
+  try {
+    const { id } = req.params;
+    const { title, questions, results } = req.body;
+
+    const doc = await Item.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          ...(title !== undefined ? { title } : {}),
+          ...(questions !== undefined ? { questions } : {}),
+          ...(results !== undefined ? { results } : {}),
+        },
+      },
+      { new: true, runValidators: true } // don't use .lean() here
+    );
+
+    if (!doc) return res.status(404).json({ message: "not found" });
+    return res.json(doc);
+  } catch (err) {
+    if (err?.name === "CastError") {
+      return res.status(400).json({ message: "invalid id" });
+    }
+    console.error("updateItem error:", err);
+    return res.status(500).json({ message: "server error" });
   }
-
-};
-
-
-
-
-export const updateItem = async (req, res) => {
-
-  try{
-    const items = await Item.findByIdAndUpdate(req.params.id,req.body,{ new: true });
-    res.status(200).json(items);
 }
 
-  catch (err){
-    res.status(501).json({ error: "update Not Implemented" });
+// DELETE /questions/:id
+export async function deleteItem(req, res) {
+  try {
+    const { id } = req.params;
+    const doc = await Item.findByIdAndDelete(id); // no .lean()
+    if (!doc) return res.status(404).json({ message: "not found" });
+    return res.json({ ok: true });
+  } catch (err) {
+    if (err?.name === "CastError") {
+      return res.status(400).json({ message: "invalid id" });
+    }
+    console.error("deleteItem error:", err);
+    return res.status(500).json({ message: "server error" });
   }
+}
 
-};
+// GET /questions/:id
+export async function loadItem(req, res) {
+  try {
+    const { id } = req.params;
+    const doc = await Item.findById(id).lean(); // fine to lean here
+    if (!doc) return res.status(404).json({ message: "not found" });
+    return res.json(doc);
+  } catch (err) {
+    if (err?.name === "CastError") {
+      return res.status(400).json({ message: "invalid id" });
+    }
+    console.error("loadItem error:", err);
+    return res.status(500).json({ message: "server error" });
+  }
+}

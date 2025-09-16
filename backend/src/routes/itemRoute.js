@@ -8,6 +8,7 @@ router.get("/", itemController.getItems);
 router.post("/", itemController.createItem);
 router.put("/:id", itemController.updateItem);
 router.delete("/:id", itemController.deleteItem);
-router.get("/:id", itemController.loadItems);
+router.get("/:id", itemController.loadItem);
+
 
 export default router;
