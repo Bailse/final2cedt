@@ -1,564 +1,640 @@
-// #################################################################################
-// ### ส่วนจำลอง API (api.js)                                                     ###
-// #################################################################################
+// Imports
+import { getItems, createItem, updateItem, deleteItem } from "./api.js";
 
-import { getItems, createItem, deleteItem, loadItem, updateItem } from "./api.js";
-
-// const DataAPI = {
-//     getAllQuizzes: function() {
-//         return getItems();
-//     },
-//     addQuiz: function(currentData, key, newQuiz) {
-//         currentData[key] = newQuiz;
-//         console.log("UPDATE/CREATE: Quiz with key:", key);
-//         return currentData;
-//     },
-//     deleteQuiz: function(currentData, key) {
-//         delete currentData[key];
-//         console.log("DELETE: Quiz with key:", key);
-//         return currentData;
-//     }
-// };
-
-const addQuiz = (currentData, key, newQuiz) => {
-    currentData[key] = newQuiz;
-    console.log("UPDATE/CREATE: Quiz with key:", key);
-    return currentData;
-}
-
-// #################################################################################
-// ### ส่วนหลักของ Application Logic                                              ###
-// #################################################################################
-
-// Global state variables
-let quizData = {};
-let currentCategoryKey = null;
+let quizData = []; 
+let currentQuizId = null; 
+let combinedQuestions = []; 
 let currentQuestionIndex = 0;
-let scoreX = 0; // คะแนนด้านอารมณ์
-let scoreY = 0; // คะแนนด้านรูปลักษณ์
-let answerHistory = []; // เก็บประวัติคำตอบ {x, y}
-let combinedQuestions = []; // รวมคำถามตอนเริ่ม Quiz
+let scoreX = 0;
+let scoreY = 0;
+let answerHistory = [];
 
-// State for the creator view
-let editingQuizKey = null; 
+// Creator view state
+let editingQuizId = null;
 let customEmotionQuestions = [];
 let customAppearanceQuestions = [];
 let customQuizResults = [];
 
-// DOM Element references
-const views = {
+// DOM buckets (assigned on DOMContentLoaded)
+let views = {};
+let loadingOverlay = null;
+
+// Utilities
+const getById = (id) => quizData.find(q => q._id === id);
+
+function setViews() {
+  views = {
     category: document.getElementById('category-selection-view'),
     management: document.getElementById('management-view'),
     quiz: document.getElementById('quiz-view'),
     result: document.getElementById('result-view'),
     creator: document.getElementById('creator-view'),
-};
-const loadingOverlay = document.getElementById('loading-overlay');
+  };
+  loadingOverlay = document.getElementById('loading-overlay');
+}
 
 function switchView(viewName) {
-    Object.values(views).forEach(view => view.classList.remove('active'));
-    if (views[viewName]) {
-        views[viewName].classList.add('active');
-    }
+  Object.values(views).forEach(v => v && v.classList.remove('active'));
+  if (views[viewName]) views[viewName].classList.add('active');
 }
 
 function goHome() {
-    currentCategoryKey = null;
-    currentQuestionIndex = 0;
-    scoreX = 0;
-    scoreY = 0;
-    answerHistory = [];
-    combinedQuestions = [];
-    editingQuizKey = null; 
-    
-    renderCategorySelection();
-    switchView('category');
+  currentQuizId = null;
+  currentQuestionIndex = 0;
+  scoreX = 0;
+  scoreY = 0;
+  answerHistory = [];
+  combinedQuestions = [];
+  editingQuizId = null;
+
+  renderCategorySelection();
+  switchView('category');
 }
 
-// ------------------- NEW & UPDATED MANAGEMENT/CREATOR FLOW -------------------
+// Category List
+function renderCategorySelection() {
+  const categoryList = document.getElementById('category-list');
+  categoryList.innerHTML = '';
 
+  if (!Array.isArray(quizData) || quizData.length === 0) {
+    categoryList.innerHTML = '<p class="text-center text-muted">ยังไม่มีแบบทดสอบ... ลองสร้างของคุณเองสิ!</p>';
+    return;
+  }
+
+  for (const q of quizData) {
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.innerText = q.title ?? 'Untitled';
+    btn.addEventListener('click', () => startQuiz(q._id));
+    categoryList.appendChild(btn);
+  }
+}
+
+// Management View
 function showManagementView() {
-    renderManagementList();
-    switchView('management');
+  renderManagementList();
+  switchView('management');
 }
 
 function renderManagementList() {
-    const listContainer = document.getElementById('quiz-management-list');
-    listContainer.innerHTML = '';
-    const quizKeys = Object.keys(quizData);
+  const listContainer = document.getElementById('quiz-management-list');
+  listContainer.innerHTML = '';
 
-    if (quizKeys.length === 0) {
-        listContainer.innerHTML = '<p class="text-center text-muted">ยังไม่มีแบบทดสอบให้จัดการ</p>';
-        return;
-    }
+  if (!quizData.length) {
+    listContainer.innerHTML = '<p class="text-center text-muted">ยังไม่มีแบบทดสอบให้จัดการ</p>';
+    return;
+  }
 
-    quizKeys.forEach(key => {
-        const quiz = quizData[key];
-        const item = document.createElement('div');
-        item.className = 'creator-question-item';
-        item.style.display = 'flex';
-        item.style.justifyContent = 'space-between';
-        item.style.alignItems = 'center';
-        
-        item.innerHTML = `
-            <p style="margin: 0; font-weight: 600;">${quiz.title}</p>
-            <div>
-                <button class="edit-btn" onclick="editQuiz('${key}')" title="แก้ไข">&#9998;</button>
-                <button class="delete-btn" onclick="deleteQuiz('${key}')" title="ลบ">&times;</button>
-            </div>
-        `;
-        listContainer.appendChild(item);
-    });
+  quizData.forEach((quiz) => {
+    const item = document.createElement('div');
+    item.className = 'creator-question-item';
+    item.style.display = 'flex';
+    item.style.justifyContent = 'space-between';
+    item.style.alignItems = 'center';
+
+    const title = document.createElement('p');
+    title.style.margin = '0';
+    title.style.fontWeight = '600';
+    title.textContent = quiz.title;
+
+    const actions = document.createElement('div');
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-btn';
+    editBtn.title = 'แก้ไข';
+    editBtn.innerHTML = '&#9998;';
+    editBtn.addEventListener('click', () => editQuiz(quiz._id));
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.title = 'ลบ';
+    delBtn.innerHTML = '&times;';
+    delBtn.addEventListener('click', () => onDeleteQuiz(quiz._id, quiz.title));
+
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+
+    item.appendChild(title);
+    item.appendChild(actions);
+    listContainer.appendChild(item);
+  });
 }
 
+async function onDeleteQuiz(id, title) {
+  const ok = confirm(`คุณต้องการลบแบบทดสอบ "${title}" ใช่หรือไม่?`);
+  if (!ok) return;
+  await deleteItem(id);
+  quizData = await getItems();
+  renderManagementList();
+  renderCategorySelection();
+}
+
+// Creator View
 function showNewCreatorView() {
-    editingQuizKey = null;
-    document.getElementById('creator-view-title').innerText = "สร้างแบบทดสอบของคุณ";
-    document.getElementById('category-name-input').value = '';
-    customEmotionQuestions = [];
-    customAppearanceQuestions = [];
-    customQuizResults = [];
-    renderAllCreatorLists();
-    switchView('creator');
+  editingQuizId = null;
+  document.getElementById('creator-view-title').innerText = "สร้างแบบทดสอบของคุณ";
+  document.getElementById('category-name-input').value = '';
+  customEmotionQuestions = [];
+  customAppearanceQuestions = [];
+  customQuizResults = [];
+  renderAllCreatorLists();
+  switchView('creator');
 }
 
-function editQuiz(key) {
-    editingQuizKey = key;
-    const quizToEdit = quizData[key];
+function editQuiz(id) {
+  editingQuizId = id;
+  const quizToEdit = getById(id);
+  if (!quizToEdit) return;
 
-    document.getElementById('creator-view-title').innerText = `แก้ไข: ${quizToEdit.title}`;
-    document.getElementById('category-name-input').value = quizToEdit.title;
-    
-    customEmotionQuestions = JSON.parse(JSON.stringify(quizToEdit.questions.emotion));
-    customAppearanceQuestions = JSON.parse(JSON.stringify(quizToEdit.questions.appearance));
-    customQuizResults = JSON.parse(JSON.stringify(quizToEdit.results));
+  document.getElementById('creator-view-title').innerText = `แก้ไข: ${quizToEdit.title}`;
+  document.getElementById('category-name-input').value = quizToEdit.title;
 
-    renderAllCreatorLists();
-    switchView('creator');
-}
+  customEmotionQuestions    = JSON.parse(JSON.stringify(quizToEdit.questions?.emotion    ?? []));
+  customAppearanceQuestions = JSON.parse(JSON.stringify(quizToEdit.questions?.appearance ?? []));
+  customQuizResults         = JSON.parse(JSON.stringify(quizToEdit.results               ?? []));
 
-function deleteQuiz(key) {
-    if (confirm(`คุณต้องการลบแบบทดสอบ "${quizData[key].title}" ใช่หรือไม่?`)) {
-        // quizData = DataAPI.deleteQuiz(quizData, key);
-        delete quizData[key];
-        console.log("DELETE: Quiz with key:", key);
-        // return currentData;
-        renderManagementList(); 
-    }
-}
-
-
-// ------------------- QUIZ GAME FLOW -------------------
-
-function startQuiz(categoryKey) {
-    currentCategoryKey = categoryKey;
-    currentQuestionIndex = 0;
-    scoreX = 0;
-    scoreY = 0;
-    answerHistory = [];
-
-    const quiz = quizData[categoryKey];
-    document.getElementById('quiz-category-title').innerText = quiz.title;
-
-    combinedQuestions = [
-        ...quiz.questions.emotion.map(q => ({...q, type: 'emotion'})),
-        ...quiz.questions.appearance.map(q => ({...q, type: 'appearance'}))
-    ];
-
-    renderQuestion();
-    switchView('quiz');
-}
-
-function renderQuestion() {
-    if (currentQuestionIndex >= combinedQuestions.length) {
-        showResult();
-        return;
-    }
-
-    const question = combinedQuestions[currentQuestionIndex];
-    document.getElementById('prev-question-btn').style.visibility = (currentQuestionIndex === 0) ? 'hidden' : 'visible';
-    document.getElementById('question-text').innerText = `(${question.type === 'emotion' ? 'อารมณ์' : 'รูปลักษณ์'}) ${question.question}`;
-
-    const answersContainer = document.getElementById('answers-container');
-    answersContainer.innerHTML = '';
-
-    question.answers.forEach(answer => {
-        const button = document.createElement('button');
-        button.className = "btn btn-answer";
-        button.innerText = answer.text;
-        button.onclick = () => selectAnswer(question.type, answer.points);
-        answersContainer.appendChild(button);
-    });
-}
-
-function selectAnswer(type, points) {
-    let pointsX = 0;
-    let pointsY = 0;
-
-    if (type === 'emotion') {
-        scoreX += points;
-        pointsX = points;
-    } else {
-        scoreY += points;
-        pointsY = points;
-    }
-    
-    answerHistory.push({ x: pointsX, y: pointsY });
-    currentQuestionIndex++;
-
-    if (currentQuestionIndex < combinedQuestions.length) {
-        renderQuestion();
-    } else {
-        showResult();
-    }
-}
-
-function previousQuestion() {
-    if (currentQuestionIndex > 0) {
-        currentQuestionIndex--;
-        const lastPoints = answerHistory.pop();
-        if (lastPoints) {
-            scoreX -= lastPoints.x;
-            scoreY -= lastPoints.y;
-        }
-        renderQuestion();
-    }
-}
-
-function showResult() {
-    const quiz = quizData[currentCategoryKey];
-    let finalResult = null;
-
-    for (const result of quiz.results) {
-        const conditionX = result.condition_x;
-        const conditionY = result.condition_y;
-
-        let isMatchX = (conditionX.op === '<=') ? (scoreX <= conditionX.val) : (scoreX > conditionX.val);
-        let isMatchY = (conditionY.op === '<=') ? (scoreY <= conditionY.val) : (scoreY > conditionY.val);
-
-        if (isMatchX && isMatchY) {
-            finalResult = result;
-            break;
-        }
-    }
-    
-    if (!finalResult) {
-        finalResult = { title: "ไม่พบผลลัพธ์", description: `คะแนนของคุณคือ อารมณ์: ${scoreX}, รูปลักษณ์: ${scoreY}` };
-    }
-
-    document.getElementById('result-title').innerText = finalResult.title;
-    document.getElementById('result-description').innerText = finalResult.description;
-    const resultImage = document.getElementById('result-image');
-    if (finalResult.imageUrl) {
-        resultImage.src = finalResult.imageUrl;
-        resultImage.style.display = 'block';
-    } else {
-        resultImage.style.display = 'none';
-    }
-    switchView('result');
-}
-
-// ### Creator View Logic ###
-
-// --- NEW FUNCTION ---
-function generateImageForCurrentResult(event) {
-    event.preventDefault(); // ป้องกันการ submit ฟอร์ม (ถ้ามี)
-    const title = document.getElementById('manual-result-title').value.trim();
-    if (!title) {
-        alert('กรุณาใส่ "ชื่อผลลัพธ์" ก่อนสร้างรูปภาพ');
-        return;
-    }
-
-    // จำลองการสร้างภาพด้วย AI โดยใช้ placeholder service
-    const encodedTitle = encodeURIComponent(title);
-    const randomBgColor = Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-    const imageUrl = `https://placehold.co/600x400/${randomBgColor}/ffffff?text=${encodedTitle}`;
-
-    const imageInput = document.getElementById('manual-result-image');
-    imageInput.value = imageUrl;
-
-    // แสดง Feedback เล็กน้อยบนปุ่ม
-    const genBtn = event.currentTarget;
-    const originalText = genBtn.innerHTML;
-    genBtn.innerHTML = 'สร้างแล้ว!';
-    genBtn.disabled = true;
-    setTimeout(() => {
-        genBtn.innerHTML = originalText;
-        genBtn.disabled = false;
-    }, 2000);
+  renderAllCreatorLists();
+  switchView('creator');
 }
 
 function addManualQuestion(type) {
-    const newQuestion = {
-        question: `คำถามใหม่ (${type === 'emotion' ? 'อารมณ์' : 'รูปลักษณ์'})`,
-        answers: [
-            { text: "คำตอบ 1", points: 1 }, { text: "คำตอบ 2", points: 2 },
-            { text: "คำตอบ 3", points: 3 }, { text: "คำตอบ 4", points: 4 }
-        ]
-    };
-    if (type === 'emotion') {
-        customEmotionQuestions.push(newQuestion);
-    } else {
-        customAppearanceQuestions.push(newQuestion);
-    }
-    renderAllCreatorLists();
+  const qLabel = type === 'emotion' ? 'อารมณ์' : 'รูปลักษณ์';
+  const newQuestion = {
+    question: `คำถามใหม่ (${qLabel})`,
+    answers: [
+      { text: "คำตอบ 1", points: 1 },
+      { text: "คำตอบ 2", points: 2 },
+      { text: "คำตอบ 3", points: 3 },
+      { text: "คำตอบ 4", points: 4 },
+    ],
+  };
+  if (type === 'emotion') customEmotionQuestions.push(newQuestion);
+  else customAppearanceQuestions.push(newQuestion);
+
+  renderAllCreatorLists();
 }
 
 function renderAllCreatorLists() {
-    renderCreatorQuestions('emotion', customEmotionQuestions, document.getElementById('emotion-questions-list'));
-    renderCreatorQuestions('appearance', customAppearanceQuestions, document.getElementById('appearance-questions-list'));
-    renderCreatorResults();
+  renderCreatorQuestions('emotion', customEmotionQuestions, document.getElementById('emotion-questions-list'));
+  renderCreatorQuestions('appearance', customAppearanceQuestions, document.getElementById('appearance-questions-list'));
+  renderCreatorResults();
 }
 
 function renderCreatorQuestions(type, questionsArray, container) {
-    container.innerHTML = '';
-    if (questionsArray.length === 0) {
-        container.innerHTML = `<p class="text-center text-muted" style="font-size: 0.875rem;">ยังไม่มีคำถามหมวดนี้...</p>`;
-        return;
-    }
+  container.innerHTML = '';
+  if (questionsArray.length === 0) {
+    container.innerHTML = `<p class="text-center text-muted" style="font-size: 0.875rem;">ยังไม่มีคำถามหมวดนี้...</p>`;
+    return;
+  }
 
-    questionsArray.forEach((q, index) => {
-        const item = document.createElement('div');
-        item.className = `creator-question-item ${type}`;
-        const answersHTML = q.answers.map((a, ansIndex) => `
-            <div class="input-group" style="margin-bottom: 0.5rem;">
-                <input type="text" class="form-control" value="${a.text}" oninput="updateCreatorAnswer('${type}', ${index}, ${ansIndex}, 'text', this.value)">
-                <input type="number" class="form-control" value="${a.points}" style="max-width: 70px;" oninput="updateCreatorAnswer('${type}', ${index}, ${ansIndex}, 'points', parseInt(this.value, 10) || 0)">
-            </div>`).join('');
-        
-        item.innerHTML = `
-            <div class="creator-question-item-header">
-                <textarea class="form-control" rows="2" oninput="updateCreatorQuestionText('${type}', ${index}, this.value)">${q.question}</textarea>
-                <button class="delete-btn" onclick="deleteCreatorQuestion('${type}', ${index})">&times;</button>
-            </div>
-            <div style="margin-top: 1rem;">${answersHTML}</div>`;
-        container.appendChild(item);
+  questionsArray.forEach((q, index) => {
+    const item = document.createElement('div');
+    item.className = `creator-question-item ${type}`;
+
+    const header = document.createElement('div');
+    header.className = 'creator-question-item-header';
+
+    const ta = document.createElement('textarea');
+    ta.className = 'form-control';
+    ta.rows = 2;
+    ta.value = q.question;
+    ta.addEventListener('input', (e) => updateCreatorQuestionText(type, index, e.target.value));
+
+    const del = document.createElement('button');
+    del.className = 'delete-btn';
+    del.innerHTML = '&times;';
+    del.addEventListener('click', () => deleteCreatorQuestion(type, index));
+
+    header.appendChild(ta);
+    header.appendChild(del);
+
+    const answersWrap = document.createElement('div');
+    answersWrap.style.marginTop = '1rem';
+
+    q.answers.forEach((a, ansIndex) => {
+      const group = document.createElement('div');
+      group.className = 'input-group';
+      group.style.marginBottom = '0.5rem';
+
+      const inputText = document.createElement('input');
+      inputText.type = 'text';
+      inputText.className = 'form-control';
+      inputText.value = a.text;
+      inputText.addEventListener('input', (e) => updateCreatorAnswer(type, index, ansIndex, 'text', e.target.value));
+
+      const inputPoints = document.createElement('input');
+      inputPoints.type = 'number';
+      inputPoints.className = 'form-control';
+      inputPoints.style.maxWidth = '70px';
+      inputPoints.value = a.points;
+      inputPoints.addEventListener('input', (e) => {
+        const v = parseInt(e.target.value, 10);
+        updateCreatorAnswer(type, index, ansIndex, 'points', Number.isNaN(v) ? 0 : v);
+      });
+
+      group.appendChild(inputText);
+      group.appendChild(inputPoints);
+      answersWrap.appendChild(group);
     });
+
+    item.appendChild(header);
+    item.appendChild(answersWrap);
+    container.appendChild(item);
+  });
 }
 
 function updateCreatorQuestionText(type, index, newText) {
-    const arr = type === 'emotion' ? customEmotionQuestions : customAppearanceQuestions;
-    if (arr[index]) arr[index].question = newText;
+  const arr = type === 'emotion' ? customEmotionQuestions : customAppearanceQuestions;
+  if (arr[index]) arr[index].question = newText;
 }
 
 function updateCreatorAnswer(type, qIndex, aIndex, field, value) {
-    const arr = type === 'emotion' ? customEmotionQuestions : customAppearanceQuestions;
-    if (arr[qIndex] && arr[qIndex].answers[aIndex]) {
-        arr[qIndex].answers[aIndex][field] = value;
-    }
+  const arr = type === 'emotion' ? customEmotionQuestions : customAppearanceQuestions;
+  if (arr[qIndex] && arr[qIndex].answers[aIndex]) {
+    arr[qIndex].answers[aIndex][field] = value;
+  }
 }
 
 function deleteCreatorQuestion(type, index) {
-    const arr = type === 'emotion' ? customEmotionQuestions : customAppearanceQuestions;
-    arr.splice(index, 1);
-    renderAllCreatorLists();
-}
-
-function addOrUpdateManualResult() {
-    const title = document.getElementById('manual-result-title').value.trim();
-    const description = document.getElementById('manual-result-desc').value.trim();
-    const imageUrl = document.getElementById('manual-result-image').value.trim();
-    const condition_x = { op: document.getElementById('condition-x-op').value, val: parseInt(document.getElementById('condition-x-val').value, 10) };
-    const condition_y = { op: document.getElementById('condition-y-op').value, val: parseInt(document.getElementById('condition-y-val').value, 10) };
-    const editingIndex = parseInt(document.getElementById('editing-result-index').value, 10);
-
-    if (!title || !description || isNaN(condition_x.val) || isNaN(condition_y.val)) {
-        alert("กรุณากรอกข้อมูลผลลัพธ์และเงื่อนไขให้ครบถ้วน");
-        return;
-    }
-    const newResult = { title, description, imageUrl, condition_x, condition_y };
-    if (editingIndex > -1) {
-        customQuizResults[editingIndex] = newResult;
-    } else {
-        customQuizResults.push(newResult);
-    }
-    renderCreatorResults();
-    resetResultForm();
-}
-
-function editCreatorResult(index) {
-    const result = customQuizResults[index];
-    document.getElementById('manual-result-title').value = result.title;
-    document.getElementById('manual-result-desc').value = result.description;
-    document.getElementById('manual-result-image').value = result.imageUrl || '';
-    document.getElementById('condition-x-op').value = result.condition_x.op;
-    document.getElementById('condition-x-val').value = result.condition_x.val;
-    document.getElementById('condition-y-op').value = result.condition_y.op;
-    document.getElementById('condition-y-val').value = result.condition_y.val;
-    document.getElementById('editing-result-index').value = index;
-    document.getElementById('manual-result-title').focus();
-}
-
-function deleteCreatorResult(index) {
-    customQuizResults.splice(index, 1);
-    renderCreatorResults();
-}
-
-function resetResultForm() {
-    const form = document.getElementById('manual-result-form');
-    form.querySelectorAll('input, textarea, select').forEach(el => {
-        if (el.type === 'hidden') el.value = -1;
-        else if (el.tagName === 'SELECT') el.selectedIndex = 0;
-        else el.value = '';
-    });
-    document.getElementById('editing-result-index').value = -1;
+  const arr = type === 'emotion' ? customEmotionQuestions : customAppearanceQuestions;
+  arr.splice(index, 1);
+  renderAllCreatorLists();
 }
 
 function renderCreatorResults() {
-    const listContainer = document.getElementById('result-creator-list');
-    listContainer.innerHTML = '';
-    if (customQuizResults.length === 0) {
-        listContainer.innerHTML = '<p class="text-center text-muted" style="font-size: 0.875rem;">ยังไม่มีผลลัพธ์...</p>';
-        return;
-    }
-    customQuizResults.forEach((r, index) => {
-        const item = document.createElement('div');
-        item.className = 'creator-question-item';
-        item.innerHTML = `
-            <div class="creator-question-item-header">
-                <div>
-                    <p style="font-weight: 600; margin:0;">${r.title}</p>
-                    <code style="font-size: 0.8em;">X ${r.condition_x.op} ${r.condition_x.val}, Y ${r.condition_y.op} ${r.condition_y.val}</code>
-                </div>
-                <div>
-                    <button class="edit-btn" onclick="editCreatorResult(${index})">&#9998;</button>
-                    <button class="delete-btn" onclick="deleteCreatorResult(${index})">&times;</button>
-                </div>
-            </div>`;
-        listContainer.appendChild(item);
-    });
+  const listContainer = document.getElementById('result-creator-list');
+  listContainer.innerHTML = '';
+  if (customQuizResults.length === 0) {
+    listContainer.innerHTML = '<p class="text-center text-muted" style="font-size: 0.875rem;">ยังไม่มีผลลัพธ์...</p>';
+    return;
+  }
+
+  customQuizResults.forEach((r, index) => {
+    const item = document.createElement('div');
+    item.className = 'creator-question-item';
+
+    const header = document.createElement('div');
+    header.className = 'creator-question-item-header';
+
+    const left = document.createElement('div');
+    const title = document.createElement('p');
+    title.style.fontWeight = '600';
+    title.style.margin = 0;
+    title.textContent = r.title;
+
+    const code = document.createElement('code');
+    code.style.fontSize = '0.8em';
+    code.textContent = `X ${r.condition_x.op} ${r.condition_x.val}, Y ${r.condition_y.op} ${r.condition_y.val}`;
+
+    left.appendChild(title);
+    left.appendChild(code);
+
+    const actions = document.createElement('div');
+    const edit = document.createElement('button');
+    edit.className = 'edit-btn';
+    edit.innerHTML = '&#9998;';
+    edit.addEventListener('click', () => editCreatorResult(index));
+
+    const del = document.createElement('button');
+    del.className = 'delete-btn';
+    del.innerHTML = '&times;';
+    del.addEventListener('click', () => deleteCreatorResult(index));
+
+    actions.appendChild(edit);
+    actions.appendChild(del);
+
+    header.appendChild(left);
+    header.appendChild(actions);
+    item.appendChild(header);
+
+    listContainer.appendChild(item);
+  });
+}
+
+function editCreatorResult(index) {
+  const r = customQuizResults[index];
+  if (!r) return;
+
+  document.getElementById('manual-result-title').value = r.title ?? '';
+  document.getElementById('manual-result-desc').value  = r.description ?? '';
+  document.getElementById('manual-result-image').value = r.imageUrl ?? '';
+  document.getElementById('condition-x-op').value      = r.condition_x?.op ?? '<=';
+  document.getElementById('condition-x-val').value     = r.condition_x?.val ?? 0;
+  document.getElementById('condition-y-op').value      = r.condition_y?.op ?? '<=';
+  document.getElementById('condition-y-val').value     = r.condition_y?.val ?? 0;
+  document.getElementById('editing-result-index').value = index;
+  document.getElementById('manual-result-title').focus();
+}
+
+function deleteCreatorResult(index) {
+  customQuizResults.splice(index, 1);
+  renderCreatorResults();
+}
+
+function resetResultForm() {
+  const form = document.getElementById('manual-result-form');
+  form.querySelectorAll('input, textarea, select').forEach(el => {
+    if (el.id === 'editing-result-index') el.value = -1;
+    else if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  document.getElementById('editing-result-index').value = -1;
+}
+
+function addOrUpdateManualResult() {
+  const title = document.getElementById('manual-result-title').value.trim();
+  const description = document.getElementById('manual-result-desc').value.trim();
+  const imageUrl = document.getElementById('manual-result-image').value.trim();
+  const condition_x = {
+    op: document.getElementById('condition-x-op').value,
+    val: parseInt(document.getElementById('condition-x-val').value, 10)
+  };
+  const condition_y = {
+    op: document.getElementById('condition-y-op').value,
+    val: parseInt(document.getElementById('condition-y-val').value, 10)
+  };
+  const editingIndex = parseInt(document.getElementById('editing-result-index').value, 10);
+
+  if (!title || !description || Number.isNaN(condition_x.val) || Number.isNaN(condition_y.val)) {
+    alert("กรุณากรอกข้อมูลผลลัพธ์และเงื่อนไขให้ครบถ้วน");
+    return;
+  }
+  const newResult = { title, description, imageUrl, condition_x, condition_y };
+  if (editingIndex > -1) customQuizResults[editingIndex] = newResult;
+  else customQuizResults.push(newResult);
+
+  renderCreatorResults();
+  resetResultForm();
+}
+
+function generateImageForCurrentResult(event) {
+  event.preventDefault();
+  const title = document.getElementById('manual-result-title').value.trim();
+  if (!title) {
+    alert('กรุณาใส่ "ชื่อผลลัพธ์" ก่อนสร้างรูปภาพ');
+    return;
+  }
+  const encodedTitle = encodeURIComponent(title);
+  const randomBgColor = Math.floor(Math.random() * 16777215)
+    .toString(16).padStart(6, '0');
+  const imageUrl = `https://placehold.co/600x400/${randomBgColor}/ffffff?text=${encodedTitle}`;
+  const imageInput = document.getElementById('manual-result-image');
+  imageInput.value = imageUrl;
+
+  const genBtn = event.currentTarget;
+  const originalText = genBtn.innerHTML;
+  genBtn.innerHTML = 'สร้างแล้ว!';
+  genBtn.disabled = true;
+  setTimeout(() => {
+    genBtn.innerHTML = originalText;
+    genBtn.disabled = false;
+  }, 1500);
 }
 
 async function generateWithLLM(type) {
-    const categoryName = document.getElementById('category-name-input').value.trim();
-    if (!categoryName) {
-        alert('กรุณาใส่ชื่อแบบทดสอบก่อน');
-        return;
+  const categoryName = document.getElementById('category-name-input').value.trim();
+  if (!categoryName) { alert('กรุณาใส่ชื่อแบบทดสอบก่อน'); return; }
+
+  const AI_API_KEY = "AIzaSyDWAaz-IlyPd0Y2Ztnd2OBII8w7cu8NqPQ";
+  const MODEL_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+
+  let prompt = '';
+  if (type === 'emotion_questions') {
+    prompt = `สำหรับแบบทดสอบ "${categoryName}", สร้างคำถาม 2 ข้อเพื่อวิเคราะห์ "ด้านอารมณ์". แต่ละข้อมี 4 ตัวเลือกพร้อมคะแนน 1-4. ตอบเป็น JSON Array เท่านั้น: [{"question":"...","answers":[{"text":"...","points":1}, ...]}, ... ]`;
+  } else if (type === 'appearance_questions') {
+    prompt = `สำหรับแบบทดสอบ "${categoryName}", สร้างคำถาม 2 ข้อเพื่อวิเคราะห์ "ด้านรูปลักษณ์". แต่ละข้อมี 4 ตัวเลือกพร้อมคะแนน 1-4. ตอบเป็น JSON Array เท่านั้น: [{"question":"...","answers":[{"text":"...","points":1}, ...]}, ... ]`;
+  } else if (type === 'results') {
+    if (customEmotionQuestions.length < 1 || customAppearanceQuestions.length < 1) {
+      alert('ต้องมีคำถามอารมณ์และรูปลักษณ์อย่างน้อย 1 ข้อ');
+      return;
     }
+    const maxScoreX = customEmotionQuestions.reduce((sum, q) => sum + Math.max(...q.answers.map(a => a.points)), 0);
+    const maxScoreY = customAppearanceQuestions.reduce((sum, q) => sum + Math.max(...q.answers.map(a => a.points)), 0);
+    const midPointX = Math.ceil(maxScoreX / 2);
+    const midPointY = Math.ceil(maxScoreY / 2);
 
-    let prompt = '';
-    if (type === 'emotion_questions') {
-        prompt = `สำหรับแบบทดสอบ "${categoryName}", สร้างคำถาม 2 ข้อเพื่อวิเคราะห์ "ด้านอารมณ์". แต่ละข้อมี 4 ตัวเลือกพร้อมคะแนน 1-4. ตอบเป็น JSON Array เท่านั้น: [{"question":"...","answers":[{"text":"...","points":1}, ...]}, ... ]`;
-    } else if (type === 'appearance_questions') {
-        prompt = `สำหรับแบบทดสอบ "${categoryName}", สร้างคำถาม 2 ข้อเพื่อวิเคราะห์ "ด้านรูปลักษณ์". แต่ละข้อมี 4 ตัวเลือกพร้อมคะแนน 1-4. ตอบเป็น JSON Array เท่านั้น: [{"question":"...","answers":[{"text":"...","points":1}, ...]}, ... ]`;
-    } else if (type === 'results') {
-        if (customEmotionQuestions.length < 1 || customAppearanceQuestions.length < 1) {
-            alert('ต้องมีคำถามอารมณ์และรูปลักษณ์อย่างน้อย 1 ข้อ');
-            return;
-        }
-        const maxScoreX = customEmotionQuestions.reduce((sum, q) => sum + Math.max(...q.answers.map(a => a.points)), 0);
-        const maxScoreY = customAppearanceQuestions.reduce((sum, q) => sum + Math.max(...q.answers.map(a => a.points)), 0);
-        const midPointX = Math.ceil(maxScoreX / 2);
-        const midPointY = Math.ceil(maxScoreY / 2);
+    prompt = `สำหรับแบบทดสอบ "${categoryName}", สร้างผลลัพธ์ 4 แบบตามแกน X (อารมณ์, สูงสุด ${maxScoreX}) และ Y (รูปลักษณ์, สูงสุด ${maxScoreY}).
+1. X <= ${midPointX}, Y <= ${midPointY}
+2. X > ${midPointX}, Y <= ${midPointY}
+3. X <= ${midPointX}, Y > ${midPointY}
+4. X > ${midPointX}, Y > ${midPointY}
+ตอบเป็น JSON Array 4 object เท่านั้น: [{"title":"...", "description":"...", "imageUrl":"https://placehold.co/600x400", "condition_x": {"op":"<=", "val":${midPointX}}, "condition_y": {"op":"<=", "val":${midPointY}}}, ... ]`;
+  }
 
-        prompt = `สำหรับแบบทดสอบ "${categoryName}", สร้างผลลัพธ์ 4 แบบตามแกน X (อารมณ์, สูงสุด ${maxScoreX}) และ Y (รูปลักษณ์, สูงสุด ${maxScoreY}).
-        1. X <= ${midPointX}, Y <= ${midPointY}
-        2. X > ${midPointX}, Y <= ${midPointY}
-        3. X <= ${midPointX}, Y > ${midPointY}
-        4. X > ${midPointX}, Y > ${midPointY}
-        ตอบเป็น JSON Array 4 object เท่านั้น: [{"title":"...", "description":"...", "imageUrl":"https://placehold.co/600x400", "condition_x": {"op":"<=", "val":${midPointX}}, "condition_y": {"op":"<=", "val":${midPointY}}}, ... ]`;
-    }
+  if (!AI_API_KEY) {
+    alert("ไม่ได้ตั้งค่า API Key — จะไม่เรียก AI จริง ๆ\n(ยังสามารถเพิ่ม/แก้คำถามเองได้)");
+    return;
+  }
 
+  loadingOverlay.style.display = 'flex';
+  try {
+    const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } };
+    const resp = await fetch(`${MODEL_URL}?key=${AI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw new Error(`API status ${resp.status}`);
+    const result = await resp.json();
+    let generatedText = result.candidates[0].content.parts[0].text
+      .replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsedJson = JSON.parse(generatedText);
+
+    if (type === 'emotion_questions') customEmotionQuestions.push(...parsedJson);
+    else if (type === 'appearance_questions') customAppearanceQuestions.push(...parsedJson);
+    else if (type === 'results') customQuizResults = parsedJson;
+
+    renderAllCreatorLists();
+  } catch (err) {
+    console.error("LLM error:", err);
+    alert("เกิดข้อผิดพลาดในการสร้างข้อมูล: " + err.message);
+  } finally {
+    loadingOverlay.style.display = 'none';
+  }
+}
+
+async function postCustomQuiz() {
+  const title = document.getElementById('category-name-input').value.trim();
+  if (!title) { alert('กรุณาตั้งชื่อแบบทดสอบ'); return; }
+  if (!customEmotionQuestions.length || !customAppearanceQuestions.length) { alert('กรุณาสร้างคำถามทั้งสองหมวดหมู่อย่างน้อย 1 ข้อ'); return; }
+  if (customQuizResults.length < 4) { alert('กรุณาสร้างผลลัพธ์ให้ครบทั้ง 4 แบบ'); return; }
+
+  const payload = {
+    title,
+    questions: { emotion: customEmotionQuestions, appearance: customAppearanceQuestions },
+    results: customQuizResults
+  };
+
+  try {
     loadingOverlay.style.display = 'flex';
-    try {
-        const apiKey = "AIzaSyDWAaz-IlyPd0Y2Ztnd2OBII8w7cu8NqPQ"; // **สำคัญ: ใส่ API Key ของคุณที่นี่**
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-        const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } };
-        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (!response.ok) throw new Error(`API error! status: ${response.status}`);
-        const result = await response.json();
-        let generatedText = result.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsedJson = JSON.parse(generatedText);
-
-        if (type === 'emotion_questions') customEmotionQuestions.push(...parsedJson);
-        else if (type === 'appearance_questions') customAppearanceQuestions.push(...parsedJson);
-        else if (type === 'results') customQuizResults = parsedJson;
-        renderAllCreatorLists();
-    } catch (error) {
-        console.error("Error calling LLM API:", error);
-        alert("เกิดข้อผิดพลาดในการสร้างข้อมูล: " + error.message);
-    } finally {
-        loadingOverlay.style.display = 'none';
-    }
-}
-
-function postCustomQuiz() {
-    const categoryName = document.getElementById('category-name-input').value.trim();
-    if (!categoryName) { alert('กรุณาตั้งชื่อแบบทดสอบ'); return; }
-    if (customEmotionQuestions.length === 0 || customAppearanceQuestions.length === 0) { alert('กรุณาสร้างคำถามทั้งสองหมวดหมู่อย่างน้อย 1 ข้อ'); return; }
-    if (customQuizResults.length < 4) { alert('กรุณาสร้างผลลัพธ์ให้ครบทั้ง 4 แบบ'); return; }
-
-    const keyToUse = editingQuizKey ? editingQuizKey : `custom_${Date.now()}`;
-    
-    const newQuiz = {
-        title: categoryName,
-        questions: { emotion: customEmotionQuestions, appearance: customAppearanceQuestions },
-        results: customQuizResults
-    };
-    quizData = addQuiz(quizData, keyToUse, newQuiz);
+    const created = await createItem(payload);
+    quizData.push(created); // keep local list in sync
     alert('บันทึกแบบทดสอบสำเร็จ!');
-    editingQuizKey = null; 
-    goHome();
+    showManagementView();
+    renderCategorySelection();
+  } catch (e) {
+    console.error(e);
+    alert('บันทึกไม่สำเร็จ: ' + e.message);
+  } finally {
+    loadingOverlay.style.display = 'none';
+  }
 }
 
-async function initializeApp() {
-    try {
-        quizData = await getItems();
-        renderCategorySelection();
-        switchView('category');
-    } catch (error) {
-        console.error("Failed to initialize app:", error);
-        document.getElementById('app').innerHTML = `<p style="color:red; text-align:center;">เกิดข้อผิดพลาดในการโหลดข้อมูลแบบทดสอบ (quiz.json)</p>`;
-    }
+
+// ------------------------------------------------------------
+// Quiz Flow
+function startQuiz(id) {
+  currentQuizId = id;
+  currentQuestionIndex = 0;
+  scoreX = 0;
+  scoreY = 0;
+  answerHistory = [];
+
+  const quiz = getById(id);
+  if (!quiz) { alert('ไม่พบแบบทดสอบนี้'); return; }
+
+  document.getElementById('quiz-category-title').innerText = quiz.title ?? 'Quiz';
+
+  combinedQuestions = [
+    ...(quiz.questions?.emotion ?? []).map(q => ({ ...q, type: 'emotion' })),
+    ...(quiz.questions?.appearance ?? []).map(q => ({ ...q, type: 'appearance' })),
+  ];
+
+  if (!combinedQuestions.length) {
+    alert("แบบทดสอบนี้ยังไม่มีคำถาม");
+    return;
+  }
+
+  renderQuestion();
+  switchView('quiz');
 }
 
-function renderCategorySelection() {
-    const categoryList = document.getElementById('category-list');
-    categoryList.innerHTML = '';
-    const quizKeys = Object.keys(quizData);
+function renderQuestion() {
+  if (currentQuestionIndex >= combinedQuestions.length) {
+    showResult();
+    return;
+  }
 
-    if (quizKeys.length === 0) {
-        categoryList.innerHTML = '<p class="text-center text-muted">ยังไม่มีแบบทดสอบ... ลองสร้างของคุณเองสิ!</p>';
-        return;
-    }
-    
-    for (const key of quizKeys) {
-        const category = quizData[key];
-        const button = document.createElement('button');
-        button.className = "btn";
-        button.innerText = category.title;
-        button.onclick = () => startQuiz(key);
-        categoryList.appendChild(button);
-    }
+  const q = combinedQuestions[currentQuestionIndex];
+  document.getElementById('prev-question-btn').style.visibility =
+    (currentQuestionIndex === 0) ? 'hidden' : 'visible';
+  document.getElementById('question-text').innerText =
+    `(${q.type === 'emotion' ? 'อารมณ์' : 'รูปลักษณ์'}) ${q.question}`;
+
+  const answersContainer = document.getElementById('answers-container');
+  answersContainer.innerHTML = '';
+
+  (q.answers ?? []).forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = "btn btn-answer";
+    btn.innerText = a.text;
+    btn.addEventListener('click', () => selectAnswer(q.type, a.points));
+    answersContainer.appendChild(btn);
+  });
 }
 
+function selectAnswer(type, points) {
+  let x = 0, y = 0;
+  if (type === 'emotion') { scoreX += points; x = points; }
+  else { scoreY += points; y = points; }
+
+  answerHistory.push({ x, y });
+  currentQuestionIndex++;
+  renderQuestion();
+}
+
+function previousQuestion() {
+  if (currentQuestionIndex > 0) {
+    currentQuestionIndex--;
+    const last = answerHistory.pop();
+    if (last) { scoreX -= last.x; scoreY -= last.y; }
+    renderQuestion();
+  }
+}
+
+function showResult() {
+  const quiz = getById(currentQuizId);
+  if (!quiz) { alert('ไม่พบแบบทดสอบนี้'); return; }
+
+  const results = quiz.results ?? [];
+  let finalResult = null;
+
+  for (const r of results) {
+    const cx = r.condition_x, cy = r.condition_y;
+    if (!cx || !cy) continue;
+    const matchX = (cx.op === '<=') ? (scoreX <= cx.val) : (scoreX > cx.val);
+    const matchY = (cy.op === '<=') ? (scoreY <= cy.val) : (scoreY > cy.val);
+    if (matchX && matchY) { finalResult = r; break; }
+  }
+
+  if (!finalResult) {
+    finalResult = {
+      title: "ไม่พบผลลัพธ์",
+      description: `คะแนนของคุณคือ อารมณ์: ${scoreX}, รูปลักษณ์: ${scoreY}`,
+      imageUrl: ''
+    };
+  }
+
+  document.getElementById('result-title').innerText = finalResult.title ?? '';
+  document.getElementById('result-description').innerText = finalResult.description ?? '';
+  const resultImage = document.getElementById('result-image');
+  if (finalResult.imageUrl) {
+    resultImage.src = finalResult.imageUrl;
+    resultImage.style.display = 'block';
+  } else {
+    resultImage.style.display = 'none';
+  }
+  switchView('result');
+}
+
+// ------------------------------------------------------------
+// Bind UI events
 function bindUI() {
-    const useShowManageView = document.querySelectorAll(".show-man-view");
-    const addTestBtn = document.getElementById("add-new-test");
-    const toHomeBtn = document.querySelectorAll(".to-home-btn");
-    const prevBtn = document.getElementById("prev-question-btn");
-    const inputEmotion = document.getElementById("input-emotion");
-    const inputAppearance = document.getElementById("input-appearance");
-    const genEmotion = document.getElementById("gen-emotion");
-    const genAppearance = document.getElementById("gen-appearance");
-    const genResult = document.getElementById("gen-result");
-    const genImage = document.getElementById("gen-image");
-    const addUpdManRes = document.getElementById("add-update-manual-result");
-    const postQuiz = document.getElementById("post-quiz");
+  // Top-level navigation
+  document.querySelectorAll(".show-man-view").forEach(el => el.addEventListener("click", showManagementView));
+  document.querySelectorAll(".to-home-btn").forEach(el => el.addEventListener("click", goHome));
 
-    useShowManageView.forEach((el) => el.addEventListener("click", showManagementView));
-    toHomeBtn.forEach((el) => el.addEventListener("click", goHome));
-    if (addTestBtn) addTestBtn.addEventListener("click", showNewCreatorView);
-    if (prevBtn) prevBtn.addEventListener("click", previousQuestion);
-    if (inputEmotion) inputEmotion.addEventListener("click", () => addManualQuestion('emotion'));
-    if (inputAppearance) inputAppearance.addEventListener("click", () => addManualQuestion('appearance'));
-    if (genEmotion) genEmotion.addEventListener("click", () => generateWithLLM('emotion_questions'));
-    if (genAppearance) genAppearance.addEventListener("click", () => generateWithLLM('appearance_questions'));
-    if (genResult) genResult.addEventListener("click", () => generateWithLLM('results'));
-    if (genImage) genImage.addEventListener("click", generateImageForCurrentResult);
-    if (addUpdManRes) addUpdManRes.addEventListener("click", addOrUpdateManualResult);
-    if (postQuiz) postQuiz.addEventListener("click", postCustomQuiz);
+  const addTestBtn = document.getElementById("add-new-test");
+  if (addTestBtn) addTestBtn.addEventListener("click", showNewCreatorView);
+
+  const prevBtn = document.getElementById("prev-question-btn");
+  if (prevBtn) prevBtn.addEventListener("click", previousQuestion);
+
+  // Creator controls
+  const inputEmotion = document.getElementById("input-emotion");
+  if (inputEmotion) inputEmotion.addEventListener("click", () => addManualQuestion('emotion'));
+
+  const inputAppearance = document.getElementById("input-appearance");
+  if (inputAppearance) inputAppearance.addEventListener("click", () => addManualQuestion('appearance'));
+
+  const genEmotion = document.getElementById("gen-emotion");
+  if (genEmotion) genEmotion.addEventListener("click", () => generateWithLLM('emotion_questions'));
+
+  const genAppearance = document.getElementById("gen-appearance");
+  if (genAppearance) genAppearance.addEventListener("click", () => generateWithLLM('appearance_questions'));
+
+  const genResult = document.getElementById("gen-result");
+  if (genResult) genResult.addEventListener("click", () => generateWithLLM('results'));
+
+  const genImage = document.getElementById("gen-image");
+  if (genImage) genImage.addEventListener("click", generateImageForCurrentResult);
+
+  const addUpdManRes = document.getElementById("add-update-manual-result");
+  if (addUpdManRes) addUpdManRes.addEventListener("click", addOrUpdateManualResult);
+
+  const postQuizBtn = document.getElementById("post-quiz");
+  if (postQuizBtn) postQuizBtn.addEventListener("click", postCustomQuiz);
 }
 
-
-document.addEventListener('DOMContentLoaded', bindUI);
+document.addEventListener('DOMContentLoaded', async () => {
+  setViews();
+  bindUI();
+  try {
+    quizData = await getItems();
+  } catch (e) {
+    console.error("Failed to fetch items:", e);
+    quizData = [];
+  }
+  renderCategorySelection();
+  switchView('category');
+});
